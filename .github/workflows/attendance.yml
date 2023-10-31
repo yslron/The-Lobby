@@ -1,0 +1,120 @@
+name: CTF Registration
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  ctf_registration:
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.comment.body, '/join')
+    steps:
+      - name: Register player
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
+        env:
+          LOGIN: ${{ github.event.comment.user.login }}
+        with:
+          github-token: ${{ secrets.ADMIN_TOKEN }}
+          script: |
+            if (context.issue.number === 1) {
+
+              console.log('%s showed up to class!', process.env.LOGIN);
+
+              console.log('Creating player repos ...');
+
+              await github.rest.repos.createUsingTemplate({
+                template_owner: 'OctoHigh',
+                template_repo: 'challenge-1',
+                name: `challenge-1-${process.env.LOGIN}`,
+                owner: 'OctoHigh',
+                private: false
+              });
+              
+              console.log('Pausing to allow repository to finish creation ...');
+              function freeze(time) {
+                const stop = new Date().getTime() + time;
+                while(new Date().getTime() < stop);       
+              }
+              freeze(10000);
+              console.log("Done waiting ...");
+
+              await github.rest.repos.createUsingTemplate({
+                template_owner: 'OctoHigh',
+                template_repo: 'challenge-2',
+                name: `challenge-2-${process.env.LOGIN}`,
+                owner: 'OctoHigh',
+                private: false
+              });
+              
+              console.log('Pausing to allow repository to finish creation ...');
+              function freeze(time) {
+                const stop = new Date().getTime() + time;
+                while(new Date().getTime() < stop);       
+              }
+              freeze(10000);
+              console.log("Done waiting ...");
+            }
+            
+      - name: Generating & encrypting flag 1
+        env:
+          LOGIN: ${{ github.event.comment.user.login }}
+        uses: maclarel/actions-set-secret@v/1.9.9
+        with:
+          name: 'FLAG'
+          value: ${{ secrets.FLAG1 }}
+          repository: "OctoHigh/challenge-1-${{ env.LOGIN }}"
+          token: ${{ secrets.ADMIN_TOKEN }}
+
+      - name: Generating & encrypting flag 2
+        env:
+          LOGIN: ${{ github.event.comment.user.login }}
+        uses: maclarel/actions-set-secret@v/1.9.9
+        with:
+          name: 'FLAG'
+          value: ${{ secrets.FLAG2 }}
+          repository: "OctoHigh/challenge-2-${{ env.LOGIN }}"
+          token: ${{ secrets.ADMIN_TOKEN }}
+          
+      - name: Change visibility & add player
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
+        env:
+          LOGIN: ${{ github.event.comment.user.login }}
+        with:
+          github-token: ${{ secrets.ADMIN_TOKEN }}
+          script: |
+            if (context.issue.number === 1) {
+              
+              console.log('Change repository visibility of repo 1...');
+              
+              await github.rest.repos.update({
+                owner: 'OctoHigh',
+                repo: `challenge-1-${process.env.LOGIN}`,
+                private: true
+              });
+              
+              console.log('Adding player as collaborator of repo 1 ...');
+
+              await github.rest.repos.addCollaborator({
+                owner: 'OctoHigh',
+                repo: `challenge-1-${process.env.LOGIN}`,
+                username: process.env.LOGIN,
+                permission: 'pull'
+              });
+
+              console.log('Change repository visibility of repo 2 ...');
+              
+              await github.rest.repos.update({
+                owner: 'OctoHigh',
+                repo: `challenge-2-${process.env.LOGIN}`,
+                private: true
+              });
+              
+              console.log('Adding player as collaborator of repo 2 ...');
+
+              await github.rest.repos.addCollaborator({
+                owner: 'OctoHigh',
+                repo: `challenge-2-${process.env.LOGIN}`,
+                username: process.env.LOGIN,
+                permission: 'pull'
+              });
+            }
+          
